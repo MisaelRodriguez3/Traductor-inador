@@ -1,0 +1,16 @@
+QTextEdit, QComboBox {
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+QPushButton {
+    background-color: #0078d7;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background-color: #005fa3;
+}
