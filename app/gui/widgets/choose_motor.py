@@ -22,7 +22,7 @@ class ChooseMotor(QWidget):
             self.combo_motor.addItem(motor_name)
         
         # Establecer el valor del combo de motor, por defecto 'My memory' si no está guardado
-        combo_value = Config.get(f'motor_{self.section}') or 'My memory'
+        combo_value = Config.get(f'motor_{self.section}') or 'My Memory'
         self.combo_motor.setCurrentText(combo_value)
         self.combo_motor.currentTextChanged.connect(self.save_section_motor)
 
@@ -53,7 +53,7 @@ class ChooseMotor(QWidget):
 
             # Establecer el motor guardado para cada sección
             saved_motor = Config.get(f"motor_{section}")
-            combo.setCurrentText(saved_motor if saved_motor else 'My memory')
+            combo.setCurrentText(saved_motor if saved_motor else 'My Memory')
             combo.currentTextChanged.connect(self._changes)
             self.section_combos[section] = combo
 
@@ -82,13 +82,12 @@ class ChooseMotor(QWidget):
     @property
     def motor(self) -> Motor:
         """Devuelve el motor seleccionado para la sección o el global si no hay uno definido."""
-        motor = Config.get(f'motor_{self.section}') or Config.get('motor_global') or 'My memory'
+        motor = Config.get(f'motor_{self.section}') or 'My Memory'
         return Motor[motor.replace(' ', '_').upper()]
     
     @property
     def motor_available(self):
-        motor = Config.get(f'motor_{self.section}')
-        api = Config.get(f'{Motor[motor.replace(' ', '_').upper()]}_api')
-        if api is None and Motor[motor.replace(' ', '_').upper()] != Motor.MY_MEMORY:
+        api = Config.get(f'{self.motor}_api')
+        if api is None and self.motor != Motor.MY_MEMORY:
             return False
         return True

@@ -26,8 +26,8 @@ class TranslationService:
                 case _:
                     raise TranslationError("Motor no soportado.")
                 
-        except (requests.Timeout, requests.ConnectionError):
-            raise TranslationServiceUnavailable("El servicio de traducción no está disponible.")
+        except requests.Timeout:
+            raise TimeoutError()
         except RequestException as e:
             raise TranslationServiceUnavailable(f"Error en la solicitud: {e}")
         except (KeyError, ValueError) as e:

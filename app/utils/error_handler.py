@@ -25,10 +25,10 @@ def handle_error(e: Exception, parent=None):
             show_error("El servicio de traducción no está disponible.", parent)
         case te.TranslationFailed():
             show_error("La traducción falló. Verifica el texto o el idioma.", parent, is_critical=False)
-        case TimeoutError():
-            show_error("Tiempo de espera agotado. Verifica tu conexión a internet.", parent)
         case ae.Unauthorized():
             show_error('La API no esta configurada', parent)
+        case TimeoutError():
+            show_error("Tiempo de espera agotado. Verifica tu conexión a internet.", parent)
         case Exception():
             show_error(str(e), parent)  
         case _:
