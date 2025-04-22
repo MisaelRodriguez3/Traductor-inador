@@ -1,6 +1,12 @@
-from docx import Document
 from typing import Optional, Callable
-from .watermark import add_watermark
+from docx import Document
+from app.utils.error_handler import handle_error
+from app.exceptions.document import (
+    DocumentNotFound,
+    DocumentReadError,
+    DocumentWriteError,
+    ParagraphTranslationError,
+)
 
 class DocxProcessor:
     def __init__(self, translator, chunk_size: int = 200):
@@ -15,20 +21,30 @@ class DocxProcessor:
         lang_to: str,
         progress_callback: Callable[[int, int], None] | None = None
     ) -> None:
-        """Procesa un documento DOCX completo con traducción y marca de agua."""
-        doc = Document(input_path)
+        """Procesa un documento DOCX completo con traducción."""
+        try:
+            doc = Document(input_path)
+        except FileNotFoundError:
+            raise DocumentNotFound(f"No se encontró el archivo: {input_path}")
+        except Exception as e:
+            raise DocumentReadError(f"No se pudo leer el documento: {e}")
         
         all_paragraphs = self._extract_all_paragraphs(doc)
         total_paragraphs = len(all_paragraphs)
         
         for idx, paragraph in enumerate(all_paragraphs, 1):
-            self._translate_paragraph(paragraph, lang_from, lang_to)
+            try:
+                self._translate_paragraph(paragraph, lang_from, lang_to)
+            except Exception as e:
+                raise ParagraphTranslationError(f"Error en el párrafo {idx}: {e}")
             self._update_progress(progress_callback, idx, total_paragraphs)
-        
-        add_watermark(doc, "DOCX Translator")
-        doc.save(output_path)
+        try:
+            doc.save(output_path)
+        except Exception as e:
+            raise DocumentWriteError(f"No se pudo guardar el archivo: {e}")
 
-    def _extract_all_paragraphs(self, doc: Document) -> list:
+
+    def _extract_all_paragraphs(self, doc) -> list:
         """Extrae todos los párrafos del documento, incluyendo los de las tablas."""
         main_paragraphs = list(doc.paragraphs)
         table_paragraphs = [
@@ -45,44 +61,37 @@ class DocxProcessor:
         if not paragraph.text.strip():
             return
 
-        original_runs = paragraph.runs
-        combined_text = self._combine_runs_text(original_runs)
-        translated_text = self._translate_text(combined_text, lang_from, lang_to)
-        
-        self._update_paragraph_runs(original_runs, translated_text)
+        for run in paragraph.runs:
+            original_text = run.text
+            if not original_text.strip():
+                continue
 
-    def _combine_runs_text(self, runs) -> str:
-        """Combina el texto de todos los runs del párrafo."""
-        return ''.join(run.text for run in runs)
+            chunks = self._split_into_chunks(original_text, self.chunk_size)
+            translated_chunks = []
 
-    def _translate_text(self, text: str, lang_from: str, lang_to: str) -> str:
-        """Traduce texto en chunks manejables."""
-        if not text.strip():
-            return text
+            for chunk in chunks:
+                translated_chunk = self.translator.translate(chunk, lang_from, lang_to)
+                translated_chunks.append(translated_chunk)
 
-        chunks = self._split_into_chunks(text)
-        return ''.join(self.translator.translate(chunk, lang_from, lang_to) for chunk in chunks)
+            run.text = ''.join(translated_chunks)
 
-    def _split_into_chunks(self, text: str) -> list[str]:
-        """Divide el texto en chunks del tamaño especificado."""
-        return [text[i:i + self.chunk_size] for i in range(0, len(text), self.chunk_size)]
+    def _split_into_chunks(self, text: str, max_chunk_size: int) -> list[str]:
+        """Divide el texto en chunks del tamaño especificado, evitando cortar palabras."""
+        chunks = []
+        words = text.split(' ')
+        current_chunk = ""
 
-    def _update_paragraph_runs(self, original_runs, translated_text: str) -> None:
-        """Actualiza los runs del párrafo con el texto traducido."""
-        if not translated_text:
-            return
+        for word in words:
+            if len(current_chunk) + len(word) + 1 <= max_chunk_size:
+                current_chunk += word + ' '
+            else:
+                chunks.append(current_chunk.strip())
+                current_chunk = word + ' '
 
-        chunks = self._calculate_run_chunks(len(original_runs), len(translated_text))
-        current_position = 0
-        
-        for run, chunk_size in zip(original_runs, chunks):
-            run.text = translated_text[current_position:current_position + chunk_size]
-            current_position += chunk_size
+        if current_chunk.strip():
+            chunks.append(current_chunk.strip())
 
-    def _calculate_run_chunks(self, num_runs: int, text_length: int) -> list[int]:
-        """Calcula la distribución de caracteres por run."""
-        chunk_size, remainder = divmod(text_length, num_runs)
-        return [chunk_size + 1 if i < remainder else chunk_size for i in range(num_runs)]
+        return chunks
 
     def _update_progress(
         self,

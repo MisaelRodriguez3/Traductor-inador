@@ -28,10 +28,10 @@ class TranslationService:
                 
         except requests.Timeout:
             raise TimeoutError()
-        except RequestException as e:
-            raise TranslationServiceUnavailable(f"Error en la solicitud: {e}")
-        except (KeyError, ValueError) as e:
-            raise TranslationFailed(f"Error procesando respuesta: {e}")
+        except RequestException:
+            raise TranslationServiceUnavailable("Error en la solicitud.")
+        except (KeyError, ValueError):
+            raise TranslationFailed("Error procesando respuesta.")
 
     def _from_my_memory(self, text: str, lang_from: str, lang_to: str) -> str:
         url = f"https://api.mymemory.translated.net/get?q={text}&langpair={lang_from}|{lang_to}"
@@ -55,10 +55,12 @@ class TranslationService:
         )
         data: dict = response.json()
 
-        return data.get("translatedText") or self._raise_invalid_response()
+        response = data.get("translatedText")
 
-    def _raise_invalid_response(self) -> None:
-        raise TranslationFailed("La respuesta no contiene 'translatedText'.")
+        if not response:
+            raise TranslationFailed("La respuesta no contiene 'translatedText'.")
+
+        return response
 
     def _from_google_translate(self, text: str, lang_from: str, lang_to: str) -> str:
         url = "https://translation.googleapis.com/language/translate/v2"

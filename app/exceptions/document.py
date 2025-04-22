@@ -1,5 +1,18 @@
-class DocxProcessorError(Exception):
-    """Excepción base para errores del procesador de documentos"""
+class DocumentProcessingError(Exception):
+    """Error base para el procesamiento de documentos."""
 
-class DocumentProcessingError(DocxProcessorError):
-    """Error en el procesamiento del documento"""
+
+class DocumentNotFound(DocumentProcessingError):
+    """Se lanza cuando no se encuentra el archivo de entrada."""
+
+
+class DocumentReadError(DocumentProcessingError):
+    """Se lanza cuando ocurre un error al leer el documento."""
+
+
+class DocumentWriteError(DocumentProcessingError):
+    """Se lanza cuando ocurre un error al guardar el documento."""
+
+
+class ParagraphTranslationError(DocumentProcessingError):
+    """Error al traducir un párrafo o run del documento."""

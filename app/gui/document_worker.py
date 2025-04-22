@@ -1,11 +1,10 @@
 from PyQt6.QtCore import pyqtSignal, QObject
 from app.core.translator import TranslationManager
-from app.utils.error_handler import handle_error
 
 class DocumentWorker(QObject):
     progress_updated = pyqtSignal(int)
     finished = pyqtSignal(str)
-    error_occurred = pyqtSignal(str)
+    error_occurred = pyqtSignal(Exception)
 
     def __init__(self, input_path, output_path,lang_from, lang_to, translation_manager: TranslationManager):
         super().__init__()
@@ -27,5 +26,4 @@ class DocumentWorker(QObject):
             
             self.finished.emit(self.output_path)
         except Exception as e:
-            handle_error(e)
-            self.error_occurred.emit()
+            self.error_occurred.emit(e)

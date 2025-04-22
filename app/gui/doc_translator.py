@@ -11,6 +11,8 @@ from PyQt6.QtWidgets import (
     QStyle
 )
 from PyQt6.QtCore import QThread, Qt
+
+from app.exceptions.authorization import Unauthorized
 from .document_worker import DocumentWorker
 from .widgets.choose_motor import ChooseMotor
 from app.core.translator import TranslationManager
@@ -108,7 +110,8 @@ class DocTranslatorTab(QWidget):
         try:
             if not self.current_file:
                 return
-
+            if not self.choose_motor.motor_available:
+                raise Unauthorized()
             save_dialog = QFileDialog()
             save_path, _ = save_dialog.getSaveFileName(
                 self,
@@ -119,9 +122,10 @@ class DocTranslatorTab(QWidget):
 
             if not save_path:
                 return
-
+            
             self.progress_bar.setVisible(True)
             self.progress_bar.setValue(0)
+            self.progress_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.setEnabled(False)
 
             # Configurar parámetros
@@ -152,6 +156,8 @@ class DocTranslatorTab(QWidget):
         self.progress_bar.setValue(value)
 
     def on_translation_finished(self, output_path):
+        self.worker_thread.quit()
+        self.worker_thread.wait()
         self.progress_bar.setVisible(False)
         self.setEnabled(True)
         QMessageBox.information(
@@ -160,6 +166,9 @@ class DocTranslatorTab(QWidget):
             f"Documento guardado en:\n{output_path}"
         )
 
-    def show_error(self):
+    def show_error(self, error: Exception):
+        self.worker_thread.quit()
+        self.worker_thread.wait()
         self.progress_bar.setVisible(False)
         self.setEnabled(True)
+        handle_error(error, self)  # Mostrar el error correctamente
