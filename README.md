@@ -3,12 +3,23 @@
 <h1 align="center">Traductor-inador</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/python-3.12.5-%233498DB" alt="Python">
-  <img src="https://img.shields.io/badge/PyQt6-6.9.0-%232ECC71" alt="PyQt6">
-  <img src="https://img.shields.io/badge/PyInstaller-6.9.0-%23F1C40F" alt="PyInstaller">
-  <img src="https://img.shields.io/badge/python--docx-1.1.2-%23E74C3C" alt="python-docx">
-  <img src="https://img.shields.io/badge/sphinx-1.1.2-%239B59B6" alt="sphinx">
+  <a href="https://docs.python.org/3/" target="_blank">
+    <img src="https://img.shields.io/badge/python-3.12.5-%233498DB" alt="Python">
+  </a>
+  <a href="https://doc.qt.io/qtforpython-6/" target="_blank">
+    <img src="https://img.shields.io/badge/PyQt6-6.9.0-%232ECC71" alt="PyQt6">
+  </a>
+  <a href="https://pyinstaller.org/en/stable/" target="_blank">
+    <img src="https://img.shields.io/badge/PyInstaller-6.13.0-%23F1C40F" alt="PyInstaller">
+  </a>
+  <a href="https://python-docx.readthedocs.io/en/latest/" target="_blank">
+    <img src="https://img.shields.io/badge/python--docx-1.1.2-%23E74C3C" alt="python-docx">
+  </a>
+  <a href="https://www.sphinx-doc.org/en/master/" target="_blank">
+    <img src="https://img.shields.io/badge/sphinx-8.2.3-%239B59B6" alt="sphinx">
+  </a>
 </p>
+
 
 Professional desktop application for advanced translation of text and DOCX documents with format preservation.
 
