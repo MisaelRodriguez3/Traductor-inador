@@ -11,71 +11,88 @@ from PyQt6.QtWidgets import (
     QStyle
 )
 from PyQt6.QtCore import QThread, Qt
-
 from app.exceptions.authorization import Unauthorized
 from .document_worker import DocumentWorker
-from .widgets.choose_motor import ChooseMotor
+from .widgets.choose_engine import ChooseEngine
 from app.core.translator import TranslationManager
 from app.core.constants import LANGUAGES
 from app.utils.error_handler import handle_error
 from app.utils.style_loader import load_stylesheet
     
 class DocTranslatorTab(QWidget):
+    """Document translation interface component for handling DOCX files.
+    
+    Provides a GUI for:
+    - Selecting translation engine
+    - Choosing source/target languages
+    - File selection and translation execution
+    - Progress monitoring
+    
+    Attributes:
+        choose_engine (ChooseEngine): Translation engine selector component
+        tm (TranslationManager): Translation manager instance
+        current_file(str | None): Path to currently selected document
+        languages (dict[str, str]): Available languages mapping (display name to code)
+    """
+
     def __init__(self):
+        """Initializes document translator tab with default configuration."""
         super().__init__()
         self.setStyleSheet(load_stylesheet('doc_translator.qss', 'screens'))
-        self.choose_motor = ChooseMotor('doc')
-        self.motor = self.choose_motor.motor
-        self.tm = TranslationManager(self.motor)
+        self.choose_engine = ChooseEngine('doc')
+        self.engine = self.choose_engine.engine
+        self.tm = TranslationManager(self.engine)
         self.current_file = None
         self.languages = LANGUAGES
         self.init_ui()
         self.connect_signals()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
+        """Initializes UI layout and components."""
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        layout.addWidget(self.choose_motor)
-        # Selector de idiomas
+        # Engine selection
+        layout.addWidget(self.choose_engine)
+
+        # Language selection
         lang_layout = QHBoxLayout()
-        
         self.combo_from = QComboBox()
         self.combo_to = QComboBox()
+        
         for lang in self.languages:
             self.combo_from.addItem(lang)
             self.combo_to.addItem(lang)
+            
         self.combo_from.setCurrentText('Español')
         self.combo_to.setCurrentText("Inglés")
 
-        lang_layout.addWidget(QLabel("Idioma de origen: "))
+        lang_layout.addWidget(QLabel("Source Language: "))
         lang_layout.addWidget(self.combo_from)
         lang_layout.addStretch()
-
-
-        lang_layout.addWidget(QLabel("Idioma de destino:"))
+        lang_layout.addWidget(QLabel("Target Language:"))
         lang_layout.addWidget(self.combo_to)
         lang_layout.addStretch()
 
-        # Botones
-        self.select_btn = QPushButton("Seleccionar DOCX")
+        # File controls
+        self.select_btn = QPushButton("Select DOCX")
         self.select_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton))
         
-        self.translate_btn = QPushButton("Traducir Documento")
+        self.translate_btn = QPushButton("Translate Document")
         self.translate_btn.setEnabled(False)
         self.translate_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))
 
-        # Info de archivo
-        self.file_label = QLabel("Ningún documento seleccionado")
+        # File info
+        self.file_label = QLabel("No document selected")
         self.file_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.file_label.setStyleSheet("color: #666; font-style: italic;")
 
-        # Barra de progreso
+        # Progress indicator
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
 
-        # Diseño
+        # Layout assembly
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.select_btn)
         button_layout.addWidget(self.translate_btn)
@@ -88,34 +105,41 @@ class DocTranslatorTab(QWidget):
         
         self.setLayout(layout)
 
-    def connect_signals(self):
+    def connect_signals(self) -> None:
+        """Connects UI element signals to handler methods."""
         self.select_btn.clicked.connect(self.select_document)
         self.translate_btn.clicked.connect(self.start_translation)
 
-    def select_document(self):
-        file_dialog = QFileDialog()
-        file_path, _ = file_dialog.getOpenFileName(
+    def select_document(self) -> None:
+        """Handles document selection through file dialog."""
+        file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Seleccionar documento",
+            "Select Document",
             "",
             "Word Documents (*.docx)"
         )
         
         if file_path:
             self.current_file = file_path
-            self.file_label.setText(f"Documento seleccionado: {file_path.split('/')[-1]}")
+            self.file_label.setText(f"Selected document: {file_path.split('/')[-1]}")
             self.translate_btn.setEnabled(True)
 
-    def start_translation(self):
+    def start_translation(self) -> None:
+        """Initiates document translation process in background thread.
+        
+        Raises:
+            Unauthorized: If selected engine lacks required API configuration
+            Exception: Propagates any errors during setup
+        """
         try:
             if not self.current_file:
                 return
-            if not self.choose_motor.motor_available:
+            if not self.choose_engine.engine_available:
                 raise Unauthorized()
-            save_dialog = QFileDialog()
-            save_path, _ = save_dialog.getSaveFileName(
+                
+            save_path, _ = QFileDialog.getSaveFileName(
                 self,
-                "Guardar documento traducido",
+                "Save Translated Document",
                 "",
                 "Word Documents (*.docx)"
             )
@@ -123,16 +147,16 @@ class DocTranslatorTab(QWidget):
             if not save_path:
                 return
             
+            # Initialize progress UI
             self.progress_bar.setVisible(True)
             self.progress_bar.setValue(0)
-            self.progress_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.setEnabled(False)
 
-            # Configurar parámetros
+            # Configure translation parameters
             lang_from = self.languages[self.combo_from.currentText()]
             lang_to = self.languages[self.combo_to.currentText()]
 
-            # Ejecutar en un hilo separado
+            # Start background worker
             self.worker_thread = QThread()
             self.worker = DocumentWorker(
                 self.current_file,
@@ -142,33 +166,50 @@ class DocTranslatorTab(QWidget):
                 self.tm
             )
 
-            self.worker.moveToThread(self.worker_thread)
+            # Connect worker signals
             self.worker.progress_updated.connect(self.update_progress)
             self.worker.finished.connect(self.on_translation_finished)
             self.worker.error_occurred.connect(self.show_error)
 
+            self.worker.moveToThread(self.worker_thread)
             self.worker_thread.started.connect(self.worker.process)
             self.worker_thread.start()
+
         except Exception as e:
             handle_error(e, self)
 
-    def update_progress(self, value):
+    def update_progress(self, value: int) -> None:
+        """Updates progress bar with current translation progress.
+        
+        Args:
+            value (int): Percentage completion (0-100)
+        """
         self.progress_bar.setValue(value)
 
-    def on_translation_finished(self, output_path):
+    def on_translation_finished(self, output_path: str) -> None:
+        """Handles successful translation completion.
+        
+        Args:
+            output_path (str): Path to generated translated document
+        """
         self.worker_thread.quit()
         self.worker_thread.wait()
         self.progress_bar.setVisible(False)
         self.setEnabled(True)
         QMessageBox.information(
             self,
-            "Traducción completada",
-            f"Documento guardado en:\n{output_path}"
+            "Translation Complete",
+            f"Document saved at:\n{output_path}"
         )
 
-    def show_error(self, error: Exception):
+    def show_error(self, error: Exception) -> None:
+        """Handles translation errors from worker thread.
+        
+        Args:
+            error (Exception): Exception raised during translation
+        """
         self.worker_thread.quit()
         self.worker_thread.wait()
         self.progress_bar.setVisible(False)
         self.setEnabled(True)
-        handle_error(error, self)  # Mostrar el error correctamente
+        handle_error(error, self)

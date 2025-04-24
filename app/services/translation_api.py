@@ -1,7 +1,7 @@
 import requests
 from requests.exceptions import RequestException
 from app.core.config import Config
-from app.core.constants import Motor
+from app.core.constants import Engine
 from app.exceptions.translation import (
     TranslationError,
     TranslationServiceUnavailable,
@@ -9,22 +9,55 @@ from app.exceptions.translation import (
 )
 
 class TranslationService:
-    def __init__(self, motor: Motor = Motor.MY_MEMORY) -> None:
-        self.motor = motor
+    """Text translation service using different translation engines.
+    
+    Supports multiple providers through dynamic configuration.
+    
+    Attributes:
+        engine (Engine): Translation engine to use (MY_MEMORY|MAGIC_LOOPS|GOOGLE|DEEPL)
+    
+    Example:
+        >>> service = TranslationService(Engine.GOOGLE)
+        >>> translated = service.translate("Hello", "en", "es")
+    """
+
+    def __init__(self, engine: Engine = Engine.MY_MEMORY) -> None:
+        """Initializes the service with specified translation engine.
+
+        Args:
+            engine (Engine, optional):Translation engine to use. Defaults to Engine.MY_MEMORY.
+        """
+        self.engine = engine
 
     def translate(self, text: str, lang_from: str, lang_to: str) -> str:
+        """Translates text using the configured engine.
+
+        Args:
+            text (str): Text to translate
+            lang_from (str): Source language code (e.g., 'en')
+            lang_to (str): Target language code (e.g., 'es')
+
+        Raises:
+            TranslationError: If the engine is not supported.
+            TimeoutError: If the request exceeds the timeout.
+            TranslationServiceUnavailable: If an error occurred in the request.
+            TranslationFailed: If there was an error processing the response.
+
+        Returns:
+            str: Translated text
+        """
         try:
-            match self.motor:
-                case Motor.MY_MEMORY:
+            match self.engine:
+                case Engine.MY_MEMORY:
                     return self._from_my_memory(text, lang_from, lang_to)
-                case Motor.MAGIC_LOOPS:
+                case Engine.MAGIC_LOOPS:
                     return self._from_magic_loops(text, lang_from, lang_to)
-                case Motor.GOOGLE:
+                case Engine.GOOGLE:
                     return self._from_google_translate(text, lang_from, lang_to)
-                case Motor.DEEPL:
+                case Engine.DEEPL:
                     return self._from_deepl(text, lang_from, lang_to)
                 case _:
-                    raise TranslationError("Motor no soportado.")
+                    raise TranslationError("Engine no soportado.")
                 
         except requests.Timeout:
             raise TimeoutError()
@@ -34,6 +67,19 @@ class TranslationService:
             raise TranslationFailed("Error procesando respuesta.")
 
     def _from_my_memory(self, text: str, lang_from: str, lang_to: str) -> str:
+        """Translates text using MyMemory Translation API.
+        
+        Args:
+            text (str): Text to translate
+            source_lang (str): Source language
+            target_lang (str): Target language
+        
+        Raises:
+            TranslationFailed: If API returns non-200 status
+
+        Returns:
+            str: Translated text
+        """
         url = f"https://api.mymemory.translated.net/get?q={text}&langpair={lang_from}|{lang_to}"
         response = requests.get(url, timeout=10)
         data: dict = response.json()
@@ -44,7 +90,23 @@ class TranslationService:
         return data["responseData"]["translatedText"]
 
     def _from_magic_loops(self, text: str, lang_from: str, lang_to: str) -> str:
-        url = Config.get_api_url(self.motor)
+        """Translates text using Magic Loops custom API.
+        
+        Requires configured endpoint URL.
+        
+        Args:
+            text (str): Text to translate
+            source_lang (str): Source language
+            target_lang (str): Target language
+            
+        Raises:
+            TranslationServiceUnavailable: Missing endpoint configuration
+            TranslationFailed: Invalid response structure
+
+        Returns:
+            str: Translated text
+        """
+        url = Config.get_api_url(self.engine)
         if not url:
             raise TranslationServiceUnavailable("URL de Magic Loops no configurada.")
 
@@ -63,13 +125,28 @@ class TranslationService:
         return response
 
     def _from_google_translate(self, text: str, lang_from: str, lang_to: str) -> str:
+        """Translates text using Google Cloud Translation API.
+        
+        Requires valid API key configuration.
+        
+        Args:
+            text (str): Text to translate
+            source_lang (str): Source language
+            target_lang (str): Target language
+            
+        Raises:
+            TranslationFailed: Invalid response structure
+            
+        Returns:
+            str: Translated text
+        """
         url = "https://translation.googleapis.com/language/translate/v2"
         params = {
             "q": text,
             "source": lang_from,
             "target": lang_to,
             "format": "text",
-            "key": Config.get_api_url(self.motor),
+            "key": Config.get_api_url(self.engine),
         }
 
         response = requests.post(url, params=params, timeout=10)
@@ -81,9 +158,24 @@ class TranslationService:
         raise TranslationFailed("Error en respuesta de Google Translate.")
 
     def _from_deepl(self, text: str, lang_from: str, lang_to: str) -> str:
+        """Translates text using DeepL API.
+        
+        Requires valid API key configuration.
+        
+        Args:
+            text (str): Text to translate
+            source_lang (str): Source language
+            target_lang (str): Target language
+            
+        Raises:
+            TranslationFailed: No valid translations in response
+            
+        Returns:
+            str: Translated text
+        """
         url = "https://api-free.deepl.com/v2/translate"
         params = {
-            "auth_key": Config.get_api_url(self.motor),
+            "auth_key": Config.get_api_url(self.engine),
             "text": text,
             "source_lang": lang_from.upper(),
             "target_lang": lang_to.upper(),

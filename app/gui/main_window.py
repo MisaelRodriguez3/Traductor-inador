@@ -4,21 +4,47 @@ from .doc_translator import DocTranslatorTab
 from .config import ConfigView
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    """Main application window with tabbed interface for different translation features.
+    
+    Provides access to:
+    - Text translation interface
+    - Document translation interface
+    - Application configuration panel
+
+    Attributes:
+        tabs (QTabWidget): Container for application feature tabs
+        text_translator_tab (TextTranslatorTab): Text translation component
+        doc_translator_tab (DocTranslatorTab): Document translation component
+        config_tab (ConfigView): Settings configuration component
+    """
+
+    def __init__(self) -> None:
+        """Initializes main window with default geometry and UI components."""
         super().__init__()
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 800, 600)  # x, y, width, height
         self._setup_ui()
         
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
+        """Configures window layout and tabbed interface.
+        
+        Private method that:
+        - Creates tab container widget
+        - Initializes feature components
+        - Sets up main window layout
+        """
         self.tabs = QTabWidget()
+        
+        # Initialize application features
         self.text_translator_tab = TextTranslatorTab()
         self.doc_translator_tab = DocTranslatorTab()
         self.config_tab = ConfigView()
-        
+
+        # Add tabs with translated titles
         self.tabs.addTab(self.text_translator_tab, "Text Translator")
         self.tabs.addTab(self.doc_translator_tab, "Document Translator")
-        self.tabs.addTab(self.config_tab, "Configuración")
+        self.tabs.addTab(self.config_tab, "Configuration")
 
+        # Set up main layout
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.tabs)
         

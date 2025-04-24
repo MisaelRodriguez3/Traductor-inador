@@ -3,12 +3,37 @@ from app.utils.get_resource import resource_path
 
 
 def load_stylesheet(filename: str, folder: str = "") -> str:
-    """
-    Carga estilos desde la estructura de carpetas organizada.
+    """Loads QSS stylesheets from organized directory structure.
     
-    Ejemplos:
-    - load_stylesheet("base.qss")  # styles/base.qss
-    - load_stylesheet("botones.qss", "widgets")  # styles/widgets/botones.qss
+    Handles stylesheet loading for both development and packaged environments
+    using resource path resolution. Returns empty string on failure.
+
+    Args:
+        filename (str): Name of the stylesheet file with extension
+        folder (str, optional): Optional subdirectory within styles directory. Defaults to "".
+
+    Returns:
+        str: Stylesheet content as string. Empty string if file not found.
+
+    Raises:
+        FileNotFoundError: If requested stylesheet doesn't exist
+        IOError: If file cannot be read
+        PermissionError: If file access is denied
+
+    Examples:
+        # Load base stylesheet
+        >>> load_stylesheet("base.qss")
+        "QWidget { background: white; }"
+
+        # Load button styles from widgets subdirectory
+        >>> load_stylesheet("buttons.qss", "widgets")
+        "QPushButton { color: blue; }"
+
+    Notes:
+        - Uses app/styles as root directory for styles
+        - Requires .qss file extension but doesn't validate contents
+        - Prints error messages to console but doesn't raise exceptions
+        - Designed to fail gracefully for missing stylesheets
     """
     try:
         style_path = Path("app/styles") 

@@ -1,6 +1,5 @@
-from typing import Optional, Callable
+from typing import Callable
 from docx import Document
-from app.utils.error_handler import handle_error
 from app.exceptions.document import (
     DocumentNotFound,
     DocumentReadError,
@@ -9,7 +8,29 @@ from app.exceptions.document import (
 )
 
 class DocxProcessor:
+    """Processes DOCX documents while preserving formatting during translation.
+    
+    Handles document loading, text extraction, chunked translation, and saving,
+    maintaining original document structure and formatting elements.
+
+    Attributes:
+        translator (TranslationService): Translation service adapter instance
+        chunk_size (int, optional): Maximum character count per translation chunk (default: 200)
+
+    Raises:
+        DocumentNotFound: Input file not found
+        DocumentReadError: Error reading document contents
+        DocumentWriteError: Error saving translated document
+        ParagraphTranslationError: Translation failure in specific paragraph
+    """
+
     def __init__(self, translator, chunk_size: int = 200):
+        """Initializes processor with translation service and chunk size.
+        
+        Args:
+            translator (TranslationService): Translation service implementing translate() method
+            chunk_size (int, optional): Maximum text chunk size for translation API calls
+        """
         self.translator = translator
         self.chunk_size = chunk_size
 
@@ -21,13 +42,28 @@ class DocxProcessor:
         lang_to: str,
         progress_callback: Callable[[int, int], None] | None = None
     ) -> None:
-        """Procesa un documento DOCX completo con traducción."""
+        """Processes and translates entire DOCX document.
+        
+        Args:
+            input_path (str): Source document file path
+            output_path (str): Destination document file path
+            lang_from (str): Source language code (ISO 639-1)
+            lang_to (str): Target language code (ISO 639-1)
+            progress_callback (Callable[[int, int], None], optional): Optional progress reporting function
+                Args: (processed_count, total_count)
+
+        Raises:
+            DocumentNotFound: If input file doesn't exist
+            DocumentReadError: If document loading fails
+            DocumentWriteError: If document saving fails
+            ParagraphTranslationError: If any paragraph translation fails
+        """
         try:
             doc = Document(input_path)
         except FileNotFoundError:
-            raise DocumentNotFound(f"No se encontró el archivo: {input_path}")
+            raise DocumentNotFound(f"File not found: {input_path}")
         except Exception as e:
-            raise DocumentReadError(f"No se pudo leer el documento: {e}")
+            raise DocumentReadError(f"Document read error: {e}")
         
         all_paragraphs = self._extract_all_paragraphs(doc)
         total_paragraphs = len(all_paragraphs)
@@ -36,16 +72,23 @@ class DocxProcessor:
             try:
                 self._translate_paragraph(paragraph, lang_from, lang_to)
             except Exception as e:
-                raise ParagraphTranslationError(f"Error en el párrafo {idx}: {e}")
+                raise ParagraphTranslationError(f"Paragraph {idx} error: {e}")
             self._update_progress(progress_callback, idx, total_paragraphs)
+            
         try:
             doc.save(output_path)
         except Exception as e:
-            raise DocumentWriteError(f"No se pudo guardar el archivo: {e}")
-
+            raise DocumentWriteError(f"Save failed: {e}")
 
     def _extract_all_paragraphs(self, doc) -> list:
-        """Extrae todos los párrafos del documento, incluyendo los de las tablas."""
+        """Extracts all document paragraphs including table contents.
+        
+        Args:
+            doc (Document): python-docx Document object
+            
+        Returns:
+            List of all Paragraph objects in document
+        """
         main_paragraphs = list(doc.paragraphs)
         table_paragraphs = [
             para
@@ -57,7 +100,13 @@ class DocxProcessor:
         return main_paragraphs + table_paragraphs
 
     def _translate_paragraph(self, paragraph, lang_from: str, lang_to: str) -> None:
-        """Traduce un párrafo manteniendo el formato original."""
+        """Translates paragraph while preserving formatting runs.
+        
+        Args:
+            paragraph (Paragraph): docx Paragraph object
+            lang_from (str): Source language code
+            lang_to (str): Target language code
+        """
         if not paragraph.text.strip():
             return
 
@@ -67,26 +116,32 @@ class DocxProcessor:
                 continue
 
             chunks = self._split_into_chunks(original_text, self.chunk_size)
-            translated_chunks = []
-
-            for chunk in chunks:
-                translated_chunk = self.translator.translate(chunk, lang_from, lang_to)
-                translated_chunks.append(translated_chunk)
-
+            translated_chunks = [
+                self.translator.translate(chunk, lang_from, lang_to)
+                for chunk in chunks
+            ]
             run.text = ''.join(translated_chunks)
 
     def _split_into_chunks(self, text: str, max_chunk_size: int) -> list[str]:
-        """Divide el texto en chunks del tamaño especificado, evitando cortar palabras."""
+        """Splits text into chunks respecting word boundaries.
+        
+        Args:
+            text (str): Input text to split
+            max_chunk_size (int): Maximum characters per chunk
+            
+        Returns:
+            list[str]: List of text chunks guaranteed under size limit
+        """
         chunks = []
         words = text.split(' ')
         current_chunk = ""
 
         for word in words:
             if len(current_chunk) + len(word) + 1 <= max_chunk_size:
-                current_chunk += word + ' '
+                current_chunk += f"{word} "
             else:
                 chunks.append(current_chunk.strip())
-                current_chunk = word + ' '
+                current_chunk = f"{word} "
 
         if current_chunk.strip():
             chunks.append(current_chunk.strip())
@@ -95,10 +150,16 @@ class DocxProcessor:
 
     def _update_progress(
         self,
-        callback: Optional[Callable[[int, int], None]],
+        callback: Callable[[int, int], None] | None,
         processed: int,
         total: int
     ) -> None:
-        """Actualiza el progreso si hay un callback registrado."""
+        """Executes progress callback if provided.
+        
+        Args:
+            callback (Callable[[int, int], None], optional): Optional progress reporting function
+            processed (int): Number of processed items
+            total (int): Total number of items
+        """
         if callback:
             callback(processed, total)
