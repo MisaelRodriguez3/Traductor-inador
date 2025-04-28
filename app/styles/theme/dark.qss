@@ -42,3 +42,10 @@ QTabBar::tab:selected {
 QTabBar::tab:hover {
     background: #005f99;
 }
+QScrollArea#custom_scroll {
+    border: 0px;
+    background: transparent;
+}
+QScrollArea#custom_scroll > QWidget > QWidget {
+    background: transparent;
+}

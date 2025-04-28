@@ -29,7 +29,7 @@ class Config:
         return cls._settings.value(key, default)
 
     @classmethod
-    def set(cls, key: str, value: str , optional) -> None:
+    def set(cls, key: str, value: str) -> None:
         """Stores or updates a configuration value.
         
         Args:

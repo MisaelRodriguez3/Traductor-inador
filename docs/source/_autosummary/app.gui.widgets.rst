@@ -1,4 +1,4 @@
-app.gui.widgets
+﻿app.gui.widgets
 ===============
 
 .. automodule:: app.gui.widgets
@@ -11,4 +11,6 @@ app.gui.widgets
    :recursive:
 
    choose_engine
+   range
+   skip_pages
    switch

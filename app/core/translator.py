@@ -56,7 +56,8 @@ class TranslationManager:
         output_path: str, 
         lang_from: str, 
         lang_to: str, 
-        progress_callback: Callable[[int, int], None] | None = None
+        progress_callback: Callable[[int, int], None] | None = None,
+        skip_pages: set[int] = set()
     ) -> None:
         """Processes and translates a DOCX document.
         
@@ -67,6 +68,7 @@ class TranslationManager:
             lang_to (str): Target language code
             progress_callback (Callable[[int, int], None], optional): Optional progress reporting function
                 Parameters: (processed_paragraphs, total_paragraphs)
+            skip_pages (set[int], optional): Set of pages to ignore in translation
 
         Raises:
             DocumentNotFound: Missing input file
@@ -75,4 +77,4 @@ class TranslationManager:
             ParagraphTranslationError: Translation error in content
         """
         processor = DocxProcessor(self.service, chunk_size=self.chunk_size)
-        processor.process_document(input_path, output_path, lang_from, lang_to, progress_callback)
+        processor.process_document(input_path, output_path, lang_from, lang_to, progress_callback, skip_pages)

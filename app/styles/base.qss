@@ -20,3 +20,10 @@ QWidget {
 QLabel {
     font-weight: bold;
 }
+QScrollArea#custom_scroll {
+    border: 0px;
+    background: transparent;
+}
+QScrollArea#custom_scroll > QWidget > QWidget {
+    background: transparent;
+}

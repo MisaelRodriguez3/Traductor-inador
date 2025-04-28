@@ -138,4 +138,4 @@ Traductor-inador/
 ## Download Executable 📦
 
 Click here to download the latest version of the program:  
-[![Download](https://img.shields.io/badge/Download-.exe-blue)](https://github.com/MisaelRodriguez3/Traductor-inador/releases/download/v1.0.0/Traductor-inador.exe)
+[![Download](https://img.shields.io/badge/Download-.exe-blue)](https://github.com/MisaelRodriguez3/Traductor-inador/releases/download/v1.0.1/Traductor-inador.exe)

@@ -17,6 +17,7 @@ class DocumentWorker(QObject):
         lang_from (str): Source language code (ISO 639-1)
         lang_to (str): Target language code (ISO 639-1)
         translation_manager (TranslationManager): Configured TranslationManager instance
+        skip_pages (set[int]): Set of pages to ignore in translation
     
     Example:
         >>> worker = DocumentWorker(
@@ -39,7 +40,8 @@ class DocumentWorker(QObject):
         output_path: str,
         lang_from: str,
         lang_to: str,
-        translation_manager: TranslationManager
+        translation_manager: TranslationManager,
+        skip_pages: set[int]
     ):
         super().__init__()
         self.input_path = input_path
@@ -47,6 +49,7 @@ class DocumentWorker(QObject):
         self.lang_from = lang_from
         self.lang_to = lang_to
         self.tm = translation_manager
+        self.skip_pages = skip_pages
 
     def process(self) -> None:
         """Executes the document translation process.
@@ -70,7 +73,8 @@ class DocumentWorker(QObject):
                 output_path=self.output_path,
                 lang_from=self.lang_from,
                 lang_to=self.lang_to,
-                progress_callback=lambda p, t: self.progress_updated.emit(int((p/t)*100))
+                progress_callback=lambda p, t: self.progress_updated.emit(int((p/t)*100)),
+                skip_pages=self.skip_pages
             )
             self.finished.emit(self.output_path)
         except Exception as e:

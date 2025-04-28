@@ -14,6 +14,7 @@ from PyQt6.QtCore import QThread, Qt
 from app.exceptions.authorization import Unauthorized
 from .document_worker import DocumentWorker
 from .widgets.choose_engine import ChooseEngine
+from .widgets.skip_pages import SkipPages
 from app.core.translator import TranslationManager
 from app.core.constants import LANGUAGES
 from app.utils.error_handler import handle_error
@@ -42,6 +43,7 @@ class DocTranslatorTab(QWidget):
         self.choose_engine = ChooseEngine('doc')
         self.engine = self.choose_engine.engine
         self.tm = TranslationManager(self.engine)
+        self.skip_pages = SkipPages()
         self.current_file = None
         self.languages = LANGUAGES
         self.init_ui()
@@ -100,6 +102,7 @@ class DocTranslatorTab(QWidget):
         layout.addLayout(lang_layout)
         layout.addLayout(button_layout)
         layout.addWidget(self.file_label)
+        layout.addWidget(self.skip_pages)
         layout.addWidget(self.progress_bar)
         layout.addStretch()
         
@@ -150,11 +153,13 @@ class DocTranslatorTab(QWidget):
             # Initialize progress UI
             self.progress_bar.setVisible(True)
             self.progress_bar.setValue(0)
+            self.progress_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.setEnabled(False)
 
             # Configure translation parameters
             lang_from = self.languages[self.combo_from.currentText()]
             lang_to = self.languages[self.combo_to.currentText()]
+            skip_pages = self.skip_pages.skip_pages
 
             # Start background worker
             self.worker_thread = QThread()
@@ -163,7 +168,8 @@ class DocTranslatorTab(QWidget):
                 save_path,
                 lang_from,
                 lang_to,
-                self.tm
+                self.tm,
+                skip_pages
             )
 
             # Connect worker signals
@@ -201,7 +207,6 @@ class DocTranslatorTab(QWidget):
             "Translation Complete",
             f"Document saved at:\n{output_path}"
         )
-
     def show_error(self, error: Exception) -> None:
         """Handles translation errors from worker thread.
         
